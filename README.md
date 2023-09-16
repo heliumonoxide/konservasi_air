@@ -1,5 +1,7 @@
-# konservasi_air
+# Project Konservasi Air
 ## Description
+This project act as an conserver of blablabalbalbalablaba
+
 
 ## Requirements
 For installation, the following libraries needs to be installed under Sketch -> Include Library -> Manage Libraries:
@@ -25,3 +27,15 @@ https://github.com/me-no-dev/arduino-esp32fs-plugin/releases/
 - Download zip file of the tools in the asset section of the page
 - Unzip/extract the downloaded file
 - Put the asset folder in to tools folder in Arduino Folder (usually in C:/Users/Documents/Arduino)
+
+## Code Pre-configuration
+In the ino. files in this section,
+```
+// SSID and password of Wifi connection:
+const char* ssid = "Arduino_ssid";
+const char* password = "password";
+```
+ssid and password need to be changed according to the router/wifi that is used.
+
+## Created by
+Bryan Indarto and Aldy Raja
