@@ -1,8 +1,4 @@
 // ---------------------------------------------------------------------------------------
-//
-// Demonstration of how to show plots on an ESP32 with a webserver (device used for tests: ESP32-WROOM-32D).
-// The code emulates sensor data that is shown on a chart in the webserver and automatically updated through websockets.
-//
 // For installation, the following library needs to be installed under Sketch -> Include Library -> Manage Libraries:
 // * ArduinoJson by Benoit Blanchon
 //
@@ -14,10 +10,6 @@
 // Required to make SPIFFS.h work:
 // https://github.com/me-no-dev/arduino-esp32fs-plugin/releases/
 // see as well: https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/
-//
-// Favicon downloaded from: https://icons8.com/icons/set/favicon
-//
-// Written by mo thunderz (last update: 11.09.2022)
 // ---------------------------------------------------------------------------------------
 
 #include <WiFi.h>                                     // needed to connect to WiFi
@@ -27,8 +19,8 @@
 #include <SPIFFS.h>
 
 // SSID and password of Wifi connection:
-const char* ssid = "Carlsjr Bintaro X-Change 1";
-const char* password = "bigburger";
+const char* ssid = "Ciki";
+const char* password = "kiky123321";
 
 // Configure IP addresses of the local access point
 //IPAddress local_IP(192,168,1,1);
