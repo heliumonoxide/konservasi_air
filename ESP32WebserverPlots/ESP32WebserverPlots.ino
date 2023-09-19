@@ -19,8 +19,8 @@
 #include <SPIFFS.h>
 
 // SSID and password of Wifi connection:
-const char* ssid = "Ciki";
-const char* password = "kiky123321";
+const char* ssid = "HotSpot - UI";
+const char* password = "";
 
 // Configure IP addresses of the local access point
 //IPAddress local_IP(192,168,1,1);
