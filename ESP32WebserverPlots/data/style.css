@@ -1,0 +1,105 @@
+@font-face {
+    font-family: lemonmilk;
+    src: url(./LEMONMILK-Bold.otf);
+}
+
+@font-face {
+    font-family: montserrat-semibold;
+    src: url(./Montserrat-SemiBold.ttf);
+}
+
+@font-face {
+    font-family: montserrat;
+    src: url(./Montserrat-Regular.ttf);
+}
+.app_title{
+    font-family: lemonmilk;
+    float: left;
+    position: relative;
+    left: 60px;
+    offset-position: auto;
+    offset-anchor: right;
+}
+
+.app_subtitle{
+    font-family: montserrat;
+    float: right;
+    position: relative;
+    right: 60px;
+    offset-position: auto;
+    offset-anchor: right;
+}
+
+.navbar {
+    background-color: #EB5E28;
+    height: 128px;
+    width: 100%;
+    border-radius: 600px;
+    position: absolute;
+    top: -81px;
+    offset-position: auto;
+    offset-anchor: center;
+}
+
+ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    width: 100%;
+}
+  
+  
+li a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+  
+/* Change the link color to #111 (black) on hover */
+.app_subtitle:hover:not(.active) {
+    background-color: #FF8353;
+}
+  
+
+.active {
+    background-color: #04AA6D;
+}
+
+.last_update {
+    font-family: lemonmilk;
+    font-size: 25px;
+    color: #403D39;
+    position: relative;
+    left: 80px;
+    top: 100px;
+    offset-position: auto;
+    offset-anchor: right;
+}
+
+.time {
+    font-family: lemonmilk;
+    font-size: 50px;
+    color: #403D39;
+    position: relative;
+    left: 80px;
+    top: 80px;
+    offset-position: auto;
+    offset-anchor: right;
+}
+
+.date {
+    font-family: montserrat-semibold;
+    font-size: 25px;
+    color: #403D39;
+    position: relative;
+    left: 80px;
+    top: 190px;
+    offset-position: auto;
+    offset-anchor: right;
+}

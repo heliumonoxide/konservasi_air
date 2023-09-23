@@ -1,11 +1,60 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Page Title</title>
+    <title>Water Observation</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="chart.js"></script>
+    <link rel="stylesheet" href="style.css">
   </head>
-  <body>
+  <body style="background-color: #FFFCF2;">
+    <div class="navbar">
+      <ul> 
+        <li class="app_title"><a>Water Observation Application</a></li>
+        <li class="app_subtitle"><a href = "">Niagara 3</a></li>
+        <li class="app_subtitle"><a href = "">Niagara 2</a></li>
+        <li class="app_subtitle"><a href = "">Niagara 1</a></li>
+      </ul>
+    </div>
+    <div class="body">
+      <div class="column1">
+        <div class="timedate">
+          <span class="last_update">Last Updated: </span><br>
+          <span id="date" class="date"></span><br>
+          <span id="time" class="time"></span>
+          <script>
+            function updateTimeData() {
+              const now = new Date();
+              const options = { year: 'numeric', month: 'long', day: 'numeric'};
+    
+              const currentDateDetail = now.toLocaleDateString(undefined, options);
+    
+              const time_ampm = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    
+              document.querySelector('#date').textContent = currentDateDetail;
+              document.querySelector('#time').textContent = time_ampm;
+            }
+    
+            setInterval(updateTimeData, 1000);
+          </script>
+        </div>
+        <div class="water_condition">
+          
+        </div>
+      </div>
+      <div class="column2">
+        <div class="water_parameter1">
+
+        </div>
+        <div class="water_parameter2">
+
+        </div>
+        <div class="water_parameter3">
+          
+        </div>
+      </div>
+    </div>
+    
+    <br>
     <canvas id="myChart" style="width:100%;max-width:600px"></canvas>
     <br>
     Set intensity level: <br>
