@@ -15,12 +15,12 @@
         <li class="app_subtitle"><a href = "">Niagara 1</a></li>
       </ul>
     </div>
-    <div class="body">
+    <div class="content">
       <div class="column1">
         <div class="timedate">
           <span class="last_update">Last Updated: </span><br>
-          <span id="date" class="date"></span><br>
-          <span id="time" class="time"></span>
+          <span id="time" class="time">NA</span><br>
+          <span id="date" class="date">NA</span>
           <script>
             function updateTimeData() {
               const now = new Date();
@@ -37,30 +37,44 @@
             setInterval(updateTimeData, 1000);
           </script>
         </div>
+        <div class="place">
+          <span class="text_place" id="places">Niagara 1</span>
+        </div>
         <div class="water_condition">
-          
+          <span class="water_quality">Water Quality</span><br>
+          <span id="final_quality" class="water_condition_value">NA</span><br>
+          <hr>
+          <span id="temperature_value" class="water_condition_value">NA</span><br>
+          <span class="water_quality">Water Temperature</span>
+
         </div>
       </div>
       <div class="column2">
         <div class="water_parameter1">
-
+          <span class="parameter">pH Meter</span>
+          <span class="parameter_value" id="ph_value">pH: NA</span>
+          <canvas id="ph_percentage" style="width:100%;max-width:600px"></canvas>
         </div>
         <div class="water_parameter2">
-
+          <span class="parameter">Turbidity</span>
+          <span class="parameter_value" id="ph_value">NTU: NA</span>
+          <canvas id="ntu_percentage" style="width:100%;max-width:600px"></canvas>
         </div>
         <div class="water_parameter3">
-          
+          <span class="parameter">Total Dissolved Solids</span>
+          <span class="parameter_value" id="ph_value">TDS: NA</span>
+          <canvas id="tds_percentage" style="width:100%;max-width:600px"></canvas>
         </div>
       </div>
     </div>
     
-    <br>
+    <!-- <br>
     <canvas id="myChart" style="width:100%;max-width:600px"></canvas>
     <br>
     Set intensity level: <br>
     <input type='range' min='1' max='10' value='5' class='slider' id='ID_RANDOM_INTENSITY'>
     Value: <span id='ID_RANDOM_INTENSITY_VALUE'>-</span><br>
     
-    <script src="javascript.js"></script>
+    <script src="javascript.js"></script> -->
   </body>
 </html>
