@@ -29,7 +29,8 @@ https://github.com/me-no-dev/arduino-esp32fs-plugin/releases/
 - Put the asset folder into tools folder in Arduino Folder (usually in C:/Users/Documents/Arduino)
 - After putting asset folder into tools folder, restart the Arduino IDE
 - Check if in the dropdown section of Tools there is ESP32 Sketch Data Upload
-- if there is, then you are set to go [x]
+- if there is, then you are set to go
+[x]
 
 ## Code Pre-configuration
 In the ino. files in this section,
