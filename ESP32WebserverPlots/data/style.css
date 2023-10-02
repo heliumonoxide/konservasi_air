@@ -237,9 +237,10 @@ hr {
     }
 
     .column2 {
-        margin-left: 60px;
-        margin-right: 60px;
+        margin-left: 100px;
+        margin-right: 10px;
         text-align: center;
+    
     }
 
     .last_update {
@@ -294,7 +295,7 @@ hr {
     }
 
     .water_parameter1 {
-        width: 90%;
+        width: 100%;
         height: 150px;
         background-color: #CCC5B9;
         border-radius: 15px;
@@ -306,7 +307,7 @@ hr {
     
     .water_parameter2 {
         margin-top: 25px;
-        width: 90%;
+        width: 100%;
         height: 150px;
         background-color: #CCC5B9;
         margin-top: 60px;
@@ -317,7 +318,7 @@ hr {
     
     .water_parameter3 {
         margin-top: 25px;
-        width: 90%;
+        width: 100%;
         height: 150px;
         margin-top: 60px;
         margin-right: 20px;
