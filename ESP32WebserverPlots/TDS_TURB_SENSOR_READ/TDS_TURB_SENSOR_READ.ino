@@ -32,7 +32,7 @@ void setup()
 void loop()
 {
   int sensorValue = analogRead(TurbidityPin);// read the input on analog pin 0:
-  float voltage = (sensorValue / 4096.0) * 5.0; // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
+  float voltage = (sensorValue / 4096.0) * 4.5; // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
   Serial.println(voltage); // print out the value you read:
   delay(500);
 
