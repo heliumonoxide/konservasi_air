@@ -1,68 +1,166 @@
 /***************************************************
- DFRobot Gravity: Analog TDS Sensor / Meter For Arduino
- <https://www.dfrobot.com/wiki/index.php/Gravity:_Analog_TDS_Sensor_/_Meter_For_Arduino_SKU:_SEN0244>
-
- Created 2017-8-22
- By Jason <jason.ling@dfrobot.com@dfrobot.com>
-
- GNU Lesser General Public License.
- See <http://www.gnu.org/licenses/> for details.
- All above must be included in any redistribution
-
- /***********Notice and Trouble shooting***************
- 1. This code is tested on Arduino Uno and Leonardo with Arduino IDE 1.0.5 r2 and 1.8.2.
- 2. More details, please click this link: <https://www.dfrobot.com/wiki/index.php/Gravity:_Analog_TDS_Sensor_/_Meter_For_Arduino_SKU:_SEN0244>
+ 
  ****************************************************/
 
-#define TurbidityPin 34
-#define TdsSensorPin 35
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <ESP32Servo.h>
+ 
+#define TEMP_PIN 12 // Yellow cable on temp-liquid sensor pin
+#define TURB_PIN 34
+#define TDS_PIN 35
+#define PH_PIN 36
+#define PIN_SERVO1 40
+#define PIN_SERVO2 41
+
+unsigned long startTime;
+
+// Temperature Sensor Parameter
+float tempValue;
+OneWire oneWire(TEMP_PIN); // Setup a oneWire instance to communicate with any OneWire devices
+DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor 
+
+// TDS Sensor Parameter
 #define VREF 5.0      // analog reference voltage(Volt) of the ADC
 #define SCOUNT  30           // sum of sample point
 int analogBuffer[SCOUNT];    // store the analog value in the array, read from ADC
 int analogBufferTemp[SCOUNT];
 int analogBufferIndex = 0,copyIndex = 0;
 float averageVoltage = 0,tdsValue = 0,temperature = 25;
+unsigned long startTimeBuffer = 0;
+unsigned long currentTimeBuffer;
+unsigned long startTimeTDS = 0;
+
+// pH Sensor Parameter
+#define samplingInterval 20
+#define Offset 0.00    
+#define printInterval 800
+#define ArrayLength  40    //times of collection
+static unsigned long start_pHSamplingTime = 0;
+static unsigned long start_pHPrintTime = 0;
+int pHArray[ArrayLength];   //Store the average value of the sensor feedback
+int pHArrayIndex=0;
+
+// Flags
+bool exec_measurement = false;
+int counter = 0;
+
+// Servo
+Servo servo1;  
+Servo servo2;
+const int sudut_trigger_open = 180;
+const int sudut_close = 0;
+const int sudut_trigger_close = 0;
+const int sudut_open = 180;
 
 void setup()
 {
     Serial.begin(115200);
-    pinMode(TdsSensorPin,INPUT);
+    pinMode(TDS_PIN,INPUT);
+    servo1.attach(PIN_SERVO1); 
+    servo2.attach(PIN_SERVO2); 
+
+    sensors.begin();
+    startTime = millis();
+    startTimeBuffer = millis();
+    startTimeTDS = millis();
+    start_pHSamplingTime = millis();
+    start_pHPrintTime = millis();
 }
 
 void loop()
 {
-  int sensorValue = analogRead(TurbidityPin);// read the input on analog pin 0:
-  float voltage = (sensorValue / 4096.0) * 4.5; // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-  Serial.println(voltage); // print out the value you read:
-  delay(500);
+  add_buffer(); // Data Additional Sensor TDS
+  if(counter == 0 || (millis() - startTime >= 600000)){
+    if (exec_measurement == false){
+      servo1.write(sudut_trigger_open);
+      servo2.write(sudut_close);
+      exec_measurement == true;
+    }
 
-   static unsigned long analogSampleTimepoint = millis();
-   if(millis()-analogSampleTimepoint > 40U)     //every 40 milliseconds,read the analog value from the ADC
-   {
-     analogSampleTimepoint = millis();
-     analogBuffer[analogBufferIndex] = analogRead(TdsSensorPin);    //read the analog value and store into the buffer
-     analogBufferIndex++;
-     if(analogBufferIndex == SCOUNT) 
-         analogBufferIndex = 0;
-   }   
-   static unsigned long printTimepoint = millis();
-   if(millis()-printTimepoint > 800U)
-   {
-      printTimepoint = millis();
-      for(copyIndex=0;copyIndex<SCOUNT;copyIndex++)
-        analogBufferTemp[copyIndex]= analogBuffer[copyIndex];
-      averageVoltage = getMedianNum(analogBufferTemp,SCOUNT) * (float)VREF / 4096.0; // read the analog value more stable by the median filtering algorithm, and convert to voltage value
-      float compensationCoefficient=1.0+0.02*(temperature-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
-      float compensationVolatge=averageVoltage/compensationCoefficient;  //temperature compensation
-      tdsValue=(133.42*compensationVolatge*compensationVolatge*compensationVolatge - 255.86*compensationVolatge*compensationVolatge + 857.39*compensationVolatge)*0.5; //convert voltage value to tds value
-      //Serial.print("voltage:");
-      //Serial.print(averageVoltage,2);
-      //Serial.print("V   ");
-      Serial.print("TDS Value:");
-      Serial.print(tdsValue,0);
-      Serial.println("ppm");
-   }
+    if (exec_measurement == true){
+      // Sensor Suhu
+      sensors.requestTemperatures();
+      tempValue = sensors.getTempCByIndex(0);
+  
+      // Sensor Turbidity
+      int sensorValue = analogRead(TURB_PIN);// read the input on analog pin 0:
+      float voltage = (sensorValue / 4096.0) * 4.5; // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
+      Serial.println(voltage); // print out the value you read:
+    
+      // Sensor TDS
+      print_tds();
+  
+      // Sensor pH
+      print_pH();
+      
+      if(counter == 4){
+        exec_measurement = false;
+        startTime = millis();
+        servo1.write(sudut_trigger_close);
+        servo2.write(sudut_open);
+        counter = 0;
+      }
+      counter += 1;
+    }
+  }
 }
+
+void add_buffer(void){
+  currentTimeBuffer = millis();
+  if(currentTimeBuffer - startTimeBuffer > 40UL)     //every 40 milliseconds,read the analog value from the ADC
+  {
+   analogBuffer[analogBufferIndex] = analogRead(TDS_PIN);    //read the analog value and store into the buffer
+   analogBufferIndex++;
+   if(analogBufferIndex == SCOUNT){
+    analogBufferIndex = 0; 
+   }
+   startTimeBuffer = currentTimeBuffer;
+  }   
+}
+
+void print_tds(void){
+  unsigned long currentTimeTDS = millis();
+  if(currentTimeTDS - startTimeTDS > 800UL)
+  { 
+    for(copyIndex=0;copyIndex<SCOUNT;copyIndex++){
+      analogBufferTemp[copyIndex]= analogBuffer[copyIndex];
+    }
+    
+    averageVoltage = getMedianNum(analogBufferTemp,SCOUNT) * (float)VREF / 4096.0; // read the analog value more stable by the median filtering algorithm, and convert to voltage value
+    float compensationCoefficient=1.0+0.02*(temperature-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
+    float compensationVolt=averageVoltage/compensationCoefficient;  //temperature compensation
+    tdsValue=(133.42*compensationVolt*compensationVolt*compensationVolt - 255.86*compensationVolt*compensationVolt + 857.39*compensationVolt)*0.5; //convert voltage value to tds value
+    //Serial.print("voltage:");
+    //Serial.print(averageVoltage,2);
+    //Serial.print("V   ");
+    Serial.print("TDS Value:");
+    Serial.print(tdsValue,0);
+    Serial.println("ppm");
+    startTimeTDS = currentTimeTDS;
+  }
+}
+
+void print_pH(void) {
+  static float pHValue,voltage;
+  if(millis()- start_pHSamplingTime > samplingInterval)
+  {
+    pHArray[pHArrayIndex++]=analogRead(PH_PIN);
+    if(pHArrayIndex==ArrayLength)pHArrayIndex=0;
+    voltage = averagearray(pHArray, ArrayLength)*5.0/4096;
+    pHValue = 3.5*voltage+Offset;
+    start_pHSamplingTime = millis();
+  }
+  if(millis() - start_pHPrintTime > printInterval)   //Every 800 milliseconds, print a numerical, convert the state of the LED indicator
+  {
+    Serial.print(" Voltage: ");
+    Serial.print(voltage, 2);
+    Serial.print(" pH value: ");
+    Serial.println(pHValue, 2);
+    start_pHPrintTime = millis();
+  }
+}
+
 int getMedianNum(int bArray[], int iFilterLen) 
 {
       int bTab[iFilterLen];
@@ -86,4 +184,44 @@ int getMedianNum(int bArray[], int iFilterLen)
       else
     bTemp = (bTab[iFilterLen / 2] + bTab[iFilterLen / 2 - 1]) / 2;
       return bTemp;
+}
+
+double averagearray(int* arr, int number){
+  int i;
+  int max,min;
+  double avg;
+  long amount=0;
+  if(number<=0){
+    Serial.println("Error number for the array to avraging!/n");
+    return 0;
+  }
+  if(number<5){   //less than 5, calculated directly statistics
+    for(i=0;i<number;i++){
+      amount+=arr[i];
+    }
+    avg = amount/number;
+    return avg;
+  }else{
+    if(arr[0]<arr[1]){
+      min = arr[0];max=arr[1];
+    }
+    else{
+      min=arr[1];max=arr[0];
+    }
+    for(i=2;i<number;i++){
+      if(arr[i]<min){
+        amount+=min;        //arr<min
+        min=arr[i];
+      }else {
+        if(arr[i]>max){
+          amount+=max;    //arr>max
+          max=arr[i];
+        }else{
+          amount+=arr[i]; //min<=arr<=max
+        }
+      }//if
+    }//for
+    avg = (double)amount/(number-2);
+  }//if
+  return avg;
 }
