@@ -1,17 +1,18 @@
 /***************************************************
- 
+ Created by Kelompok Despro:
+ - Bryan Indarto Giovanni Firjatulloh
  ****************************************************/
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <ESP32Servo.h>
  
-#define TEMP_PIN 12 // Yellow cable on temp-liquid sensor pin
+#define TEMP_PIN 32 // Yellow cable on temp-liquid sensor pin
 #define TURB_PIN 34
 #define TDS_PIN 35
-#define PH_PIN 36
-#define PIN_SERVO1 40
-#define PIN_SERVO2 41
+#define PH_PIN 33
+#define PIN_SERVO1 25
+#define PIN_SERVO2 26
 
 unsigned long startTime;
 
@@ -55,26 +56,30 @@ const int sudut_open = 180;
 
 void setup()
 {
-    Serial.begin(115200);
-    pinMode(TDS_PIN,INPUT);
-    servo1.attach(PIN_SERVO1); 
-    servo2.attach(PIN_SERVO2); 
+  Serial.begin(115200);
+  Serial.println("setup begin");
+  pinMode(TDS_PIN,INPUT);
+  servo1.attach(PIN_SERVO1); 
+//    servo2.attach(PIN_SERVO2); 
 
-    sensors.begin();
-    startTime = millis();
-    startTimeBuffer = millis();
-    startTimeTDS = millis();
-    start_pHSamplingTime = millis();
-    start_pHPrintTime = millis();
+  sensors.begin();
+  startTime = millis();
+  startTimeBuffer = millis();
+  startTimeTDS = millis();
+  start_pHSamplingTime = millis();
+  start_pHPrintTime = millis();
+  servo1.write(0);
+  Serial.println("setup end");
+  delay(2000);
 }
 
 void loop()
 {
-  add_buffer(); // Data Additional Sensor TDS
+  //add_buffer(); // Data Additional Sensor TDS
   if(counter == 0 || (millis() - startTime >= 600000)){
     if (exec_measurement == false){
       servo1.write(sudut_trigger_open);
-      servo2.write(sudut_close);
+//      servo2.write(sudut_close);
       exec_measurement == true;
     }
 
@@ -86,19 +91,21 @@ void loop()
       // Sensor Turbidity
       int sensorValue = analogRead(TURB_PIN);// read the input on analog pin 0:
       float voltage = (sensorValue / 4096.0) * 4.5; // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
+      float ntu = -1120.4*voltage*voltage + 5742.3*voltage - 4352.9;
       Serial.println(voltage); // print out the value you read:
+      Serial.println(ntu);
     
       // Sensor TDS
       print_tds();
   
       // Sensor pH
-      print_pH();
+//      print_pH();
       
       if(counter == 4){
         exec_measurement = false;
         startTime = millis();
         servo1.write(sudut_trigger_close);
-        servo2.write(sudut_open);
+//        servo2.write(sudut_open);
         counter = 0;
       }
       counter += 1;
@@ -116,6 +123,7 @@ void add_buffer(void){
     analogBufferIndex = 0; 
    }
    startTimeBuffer = currentTimeBuffer;
+   //Serial.println("Test");
   }   
 }
 
