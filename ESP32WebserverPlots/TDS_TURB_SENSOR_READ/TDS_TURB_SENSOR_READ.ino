@@ -58,6 +58,7 @@ void setup()
 {
   Serial.begin(115200);
   Serial.println("setup begin");
+  pinMode(TURB_PIN, INPUT);
   pinMode(TDS_PIN,INPUT);
   servo1.attach(PIN_SERVO1); 
 //    servo2.attach(PIN_SERVO2); 
@@ -75,31 +76,48 @@ void setup()
 
 void loop()
 {
-  //add_buffer(); // Data Additional Sensor TDS
-  if(counter == 0 || (millis() - startTime >= 600000)){
+  add_buffer(); // Data Additional Sensor TDS
+  if(counter == 0 || (millis() - startTime >= 30000) || exec_measurement == true){
     if (exec_measurement == false){
       servo1.write(sudut_trigger_open);
 //      servo2.write(sudut_close);
-      exec_measurement == true;
+      delay(10000);
+      servo1.write(sudut_trigger_close);
+      exec_measurement = true;
     }
 
+    delay(10);
+    
     if (exec_measurement == true){
+      Serial.println("start measurement");
+      
       // Sensor Suhu
       sensors.requestTemperatures();
       tempValue = sensors.getTempCByIndex(0);
+      Serial.println("=====================================");
+      Serial.print("Temp Celsius: ");
+      Serial.print(tempValue);
+      Serial.println(" C \n");
   
       // Sensor Turbidity
       int sensorValue = analogRead(TURB_PIN);// read the input on analog pin 0:
-      float voltage = (sensorValue / 4096.0) * 4.5; // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
+      Serial.print("Analog Value: ");
+      Serial.println(sensorValue);
+      float voltage = (sensorValue / 4095.0) * 5.0; // Convert the analog reading (which goes from 0 - 4096) to a voltage (0 - 4.5V):
       float ntu = -1120.4*voltage*voltage + 5742.3*voltage - 4352.9;
+      Serial.print("Turbidity Voltage: ");
       Serial.println(voltage); // print out the value you read:
+      Serial.print("Turbidity NTU: ");
       Serial.println(ntu);
-    
+      Serial.print("\n");
+      
       // Sensor TDS
       print_tds();
   
       // Sensor pH
 //      print_pH();
+
+      Serial.println("=====================================");
       
       if(counter == 4){
         exec_measurement = false;
@@ -114,6 +132,7 @@ void loop()
 }
 
 void add_buffer(void){
+//  Serial.println("Adding Buffer for TDS");
   currentTimeBuffer = millis();
   if(currentTimeBuffer - startTimeBuffer > 40UL)     //every 40 milliseconds,read the analog value from the ADC
   {
@@ -123,30 +142,26 @@ void add_buffer(void){
     analogBufferIndex = 0; 
    }
    startTimeBuffer = currentTimeBuffer;
-   //Serial.println("Test");
   }   
 }
 
 void print_tds(void){
   unsigned long currentTimeTDS = millis();
-  if(currentTimeTDS - startTimeTDS > 800UL)
-  { 
-    for(copyIndex=0;copyIndex<SCOUNT;copyIndex++){
-      analogBufferTemp[copyIndex]= analogBuffer[copyIndex];
-    }
-    
-    averageVoltage = getMedianNum(analogBufferTemp,SCOUNT) * (float)VREF / 4096.0; // read the analog value more stable by the median filtering algorithm, and convert to voltage value
-    float compensationCoefficient=1.0+0.02*(temperature-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
-    float compensationVolt=averageVoltage/compensationCoefficient;  //temperature compensation
-    tdsValue=(133.42*compensationVolt*compensationVolt*compensationVolt - 255.86*compensationVolt*compensationVolt + 857.39*compensationVolt)*0.5; //convert voltage value to tds value
-    //Serial.print("voltage:");
-    //Serial.print(averageVoltage,2);
-    //Serial.print("V   ");
-    Serial.print("TDS Value:");
-    Serial.print(tdsValue,0);
-    Serial.println("ppm");
-    startTimeTDS = currentTimeTDS;
+  for(copyIndex=0;copyIndex<SCOUNT;copyIndex++){
+    analogBufferTemp[copyIndex]= analogBuffer[copyIndex];
   }
+  
+  averageVoltage = getMedianNum(analogBufferTemp,SCOUNT) * (float)VREF / 4096.0; // read the analog value more stable by the median filtering algorithm, and convert to voltage value
+  float compensationCoefficient=1.0+0.02*(temperature-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
+  float compensationVolt=averageVoltage/compensationCoefficient;  //temperature compensation
+  tdsValue=(133.42*compensationVolt*compensationVolt*compensationVolt - 255.86*compensationVolt*compensationVolt + 857.39*compensationVolt)*0.5; //convert voltage value to tds value
+  //Serial.print("voltage:");
+  //Serial.print(averageVoltage,2);
+  //Serial.print("V   ");
+  Serial.print("TDS Value:");
+  Serial.print(tdsValue);
+  Serial.println("ppm");
+  startTimeTDS = currentTimeTDS;
 }
 
 void print_pH(void) {
