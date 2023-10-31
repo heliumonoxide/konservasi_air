@@ -6,6 +6,8 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <ESP32Servo.h>
+#include "DFRobot_PH.h"
+#include <EEPROM.h>
  
 #define TEMP_PIN 32 // Yellow cable on temp-liquid sensor pin
 #define TURB_PIN 34
@@ -33,14 +35,15 @@ unsigned long currentTimeBuffer;
 unsigned long startTimeTDS = 0;
 
 // pH Sensor Parameter
-#define samplingInterval 20
 #define Offset 0.00    
-#define printInterval 800
 #define ArrayLength  40    //times of collection
 static unsigned long start_pHSamplingTime = 0;
 static unsigned long start_pHPrintTime = 0;
 int pHArray[ArrayLength];   //Store the average value of the sensor feedback
 int pHArrayIndex=0;
+static float pHValue,pHvoltage;
+float temperature = 25;
+DFRobot_PH ph;
 
 // Flags
 bool exec_measurement = false;
@@ -115,7 +118,8 @@ void loop()
       print_tds();
   
       // Sensor pH
-//      print_pH();
+//      pH_buffer; // Old version
+      print_pH();
 
       Serial.println("=====================================");
       
@@ -142,7 +146,7 @@ void add_buffer(void){
     analogBufferIndex = 0; 
    }
    startTimeBuffer = currentTimeBuffer;
-  }   
+  }
 }
 
 void print_tds(void){
@@ -165,22 +169,35 @@ void print_tds(void){
 }
 
 void print_pH(void) {
-  static float pHValue,voltage;
-  if(millis()- start_pHSamplingTime > samplingInterval)
+//  Serial.print(" pHVoltage: "); // Old version
+//  Serial.print(pHvoltage, 2);
+//  Serial.print(" pH value: ");
+//  Serial.println(pHValue, 2);
+
+  //temperature = readTemperature();         // read your temperature sensor to execute temperature compensation
+  voltage = analogRead(PH_PIN)/4096.0*5000;  // read the voltage
+  phValue = ph.readPH(voltage,temperature);  // convert voltage to pH with temperature compensation
+  Serial.print("temperature:");
+  Serial.print(temperature,1);
+  Serial.print("^C  pH:");
+  Serial.println(phValue,2);
+  
+  ph.calibration(voltage,temperature);           // calibration process by Serail CMD
+  }
+}
+
+void pH_buffer(void) {
+ while(true)
   {
     pHArray[pHArrayIndex++]=analogRead(PH_PIN);
-    if(pHArrayIndex==ArrayLength)pHArrayIndex=0;
-    voltage = averagearray(pHArray, ArrayLength)*5.0/4096;
-    pHValue = 3.5*voltage+Offset;
-    start_pHSamplingTime = millis();
-  }
-  if(millis() - start_pHPrintTime > printInterval)   //Every 800 milliseconds, print a numerical, convert the state of the LED indicator
-  {
-    Serial.print(" Voltage: ");
-    Serial.print(voltage, 2);
-    Serial.print(" pH value: ");
-    Serial.println(pHValue, 2);
-    start_pHPrintTime = millis();
+    if(pHArrayIndex==ArrayLength){
+      pHArrayIndex=0;
+      pHvoltage = averagearray(pHArray, ArrayLength)*5.0/4096;
+      pHValue = 3.5*pHvoltage+Offset;
+      break;
+    }
+    pHvoltage = averagearray(pHArray, ArrayLength)*5.0/4096;
+    pHValue = 3.5*pHvoltage+Offset;
   }
 }
 
