@@ -12,11 +12,21 @@
 // see as well: https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/
 // ---------------------------------------------------------------------------------------
 
+/***************************************************
+ Created by Kelompok Despro:
+ - Bryan Indarto Giovanni Firjatulloh
+ - Aldy Raja Sipahutar 
+ ****************************************************/
+
+// Library for Webserver
 #include <WiFi.h>                                     // needed to connect to WiFi
 #include <ESPAsyncWebServer.h>                        // needed to create a simple webserver (make sure tools -> board is set to ESP32, otherwise you will get a "WebServer.h: No such file or directory" error)
 #include <WebSocketsServer.h>                         // needed for instant communication between client and server through Websockets
 #include <ArduinoJson.h>                              // needed for JSON encapsulation (send multiple variables with one string)
 #include <SPIFFS.h>
+
+// Library for Sensors
+// ...
 
 // SSID and password of Wifi connection:
 const char* ssid = "HotSpot - UI (NEW)";
@@ -27,14 +37,11 @@ const char* password = "";
 //IPAddress gateway(192,168,1,2);
 //IPAddress subnet(255,255,255,0);
 
-// global variables of the LED selected and the intensity of that LED
-int random_intensity = 5;
-
-const int ARRAY_LENGTH = 10;
-int sens_vals[ARRAY_LENGTH];
+const int ARRAY_LENGTH = 5;  // final_quality, temperature_value, ph_value, ntu_value, tds_value (Currently only for 5 sensors on 1 Niagara place)
+int sensors_val[ARRAY_LENGTH];
 
 // We want to periodically send values to the clients, so we need to define an "interval" and remember the last time we sent data to the client (with "previousMillis")
-int interval = 1000;                                  // send data to the client every 1000ms -> 1s
+int interval = 2000;                                  // send data to the client every 2000ms -> 2s
 unsigned long previousMillis = 0;                     // we use the "millis()" command for time reference and this will output an unsigned long
 
 // Initialization of webserver and websocket
@@ -68,7 +75,7 @@ void setup() {
   Serial.println(WiFi.localIP());                     // show IP address that the ESP32 has received from router
 // ================================================================================================================
   
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {    // define here wat the webserver needs to do
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {    // define here what the webserver needs to do
     request->send(SPIFFS, "/webpage.html", "text/html");           
   });
 
@@ -90,15 +97,16 @@ void loop() {
   if ((unsigned long)(now - previousMillis) > interval) { // check if "interval" ms has passed since last time the clients were updated
     previousMillis = now;                             // reset previousMillis
 
-    for(int i=0; i < ARRAY_LENGTH - 1; i++) {
-      sens_vals[i] = sens_vals[i+1];
+    for(int i=0; i < ARRAY_LENGTH; i++) {         // update sensors value over time
+      sensors_val[i] = random(10);
     }
-    sens_vals[ARRAY_LENGTH - 1] = (sens_vals[ARRAY_LENGTH - 1] + random(random_intensity))%10;
 
-    sendJsonArray("graph_update", sens_vals);
+    sendJsonArray("dashboard_update", sensors_val);
+
   }
 }
 
+// webSocketEvent is not in use, client cannot send any data.
 void webSocketEvent(byte num, WStype_t type, uint8_t * payload, size_t length) {      // the parameters of this callback function are always the same -> num: id of the client who send the event, type: type of message, payload: actual data sent and length: length of payload
   switch (type) {                                     // switch on the type of information sent
     case WStype_DISCONNECTED:                         // if a client is disconnected, then type == WStype_DISCONNECTED
@@ -108,8 +116,8 @@ void webSocketEvent(byte num, WStype_t type, uint8_t * payload, size_t length) {
       Serial.println("Client " + String(num) + " connected");
       
       // send variables to newly connected web client -> as optimization step one could send it just to the new client "num", but for simplicity I left that out here
-      sendJson("random_intensity", String(random_intensity));
-      sendJsonArray("graph_update", sens_vals);
+      // sendJson("random_intensity", String(random_intensity));
+      sendJsonArray("dashboard_update", sensors_val);
 
       break;
     case WStype_TEXT:                                 // if a client has sent data, then type == WStype_TEXT
@@ -128,28 +136,30 @@ void webSocketEvent(byte num, WStype_t type, uint8_t * payload, size_t length) {
         Serial.println("Type: " + String(l_type));
         Serial.println("Value: " + String(l_value));
 
-        // if random_intensity value is received -> update and write to all web clients
-        if(String(l_type) == "random_intensity") {
-          random_intensity = int(l_value);
-          sendJson("random_intensity", String(l_value));
-        }
+        // if random_intensity value is received -> update and write to all web clients, can be triggered by slider_changed() on javascript.js
+        // if(String(l_type) == "random_intensity") {
+        //   random_intensity = int(l_value);
+        //   sendJson("random_intensity", String(l_value));
+        // }
       }
       Serial.println("");
       break;
   }
 }
 
+// sendJson not in use.
 // Simple function to send information to the web clients
-void sendJson(String l_type, String l_value) {
-    String jsonString = "";                           // create a JSON string for sending data to the client
-    StaticJsonDocument<200> doc;                      // create JSON container
-    JsonObject object = doc.to<JsonObject>();         // create a JSON Object
-    object["type"] = l_type;                          // write data into the JSON object
-    object["value"] = l_value;
-    serializeJson(doc, jsonString);                   // convert JSON object to string
-    webSocket.broadcastTXT(jsonString);               // send JSON string to all clients
-}
+// void sendJson(String l_type, String l_value) {
+//     String jsonString = "";                           // create a JSON string for sending data to the client
+//     StaticJsonDocument<200> doc;                      // create JSON container
+//     JsonObject object = doc.to<JsonObject>();         // create a JSON Object
+//     object["type"] = l_type;                          // write data into the JSON object
+//     object["value"] = l_value;
+//     serializeJson(doc, jsonString);                   // convert JSON object to string
+//     webSocket.broadcastTXT(jsonString);               // send JSON string to all clients
+// }
 
+// sendJsonArray used for final_quality, temperature_value, ph_value, ntu_value, tds_value
 // Simple function to send information to the web clients
 void sendJsonArray(String l_type, int l_array_values[]) {
     String jsonString = "";                           // create a JSON string for sending data to the client

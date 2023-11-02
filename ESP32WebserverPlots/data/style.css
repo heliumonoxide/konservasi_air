@@ -197,7 +197,7 @@ hr {
     color: #403D39;
 }
 
-.chart_pH {
+.chart_param {
     display: flex;
     margin: auto;
     margin-top: 30px;
@@ -205,25 +205,25 @@ hr {
     justify-content: space-around;
 }
 
-.chart_pH > div.inactive_good {
+.chart_param > div.inactive_good {
     background-color: #286423;
     height: 40px;
     padding: 20px;   
 }
 
-.chart_pH > div.inactive_bad {
+.chart_param > div.inactive_bad {
     background-color: #763030;
     height: 40px;
     padding: 20px;   
 }
 
-.chart_pH > div.active_good {
+.chart_param > div.active_good {
     background-color: #3EC932;
     height: 40px;
     padding: 20px;   
 }
 
-.chart_pH > div.active_bad {
+.chart_param > div.active_bad {
     background-color: #EC4343;
     height: 40px;
     padding: 20px;   

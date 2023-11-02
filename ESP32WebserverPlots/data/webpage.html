@@ -4,6 +4,7 @@
     <title>Water Observation</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="chart.js"></script>
+    <script src="javascript.js"></script>
     <link rel="stylesheet" href="style.css">
   </head>
   <body style="background-color: #FFFCF2;">
@@ -30,15 +31,15 @@
     
               const time_ampm = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     
-              document.querySelector('#date').textContent = currentDateDetail;
-              document.querySelector('#time').textContent = time_ampm;
+              document.querySelector('#date').textContent = currentDateDetail;  // Update date
+              document.querySelector('#time').textContent = time_ampm;  // Update time
             }
     
             setInterval(updateTimeData, 1000);
           </script>
         </div>
         <div class="place">
-          <span class="text_place" id="places">NA</span>
+          <span class="text_place" id="places">Niagara 1</span>
         </div>
         <div class="water_condition">
           <span class="water_quality">Water Quality</span><br>
@@ -46,14 +47,13 @@
           <hr>
           <span id="temperature_value" class="water_condition_value">NA</span><br>
           <span class="water_quality">Water Temperature</span>
-
         </div>
       </div>
       <div class="column2">
         <div class="water_parameter1">
           <span class="parameter">pH Meter</span>
-          <span class="parameter_value" id="ph_value">pH: NA</span><br>
-          <div id="ph_percentage" class="chart_pH">
+          <span class="parameter_value">pH: <span id="ph_value">NA</span></span><br>
+          <div id="ph_percentage" class="chart_param">
             <div class="active_bad"></div>
             <div class="inactive_bad"></div>
             <div class="inactive_bad"></div>
@@ -72,8 +72,8 @@
         </div>
         <div class="water_parameter2">
           <span class="parameter">Turbidity</span>
-          <span class="parameter_value" id="ph_value">NTU: NA</span><br>
-          <div id="ph_percentage" class="chart_pH">
+          <span class="parameter_value">NTU: <span id="ntu_value">NA</span></span><br>
+          <div id="ntu_percentage" class="chart_param">
             <div class="active_good"></div>
             <div class="active_bad"></div>
             <div class="active_bad"></div>
@@ -91,8 +91,8 @@
         </div>
         <div class="water_parameter3">
           <span class="parameter">Total Dissolved Solids</span>
-          <span class="parameter_value" id="ph_value">TDS: NA</span><br>
-          <div id="ph_percentage" class="chart_pH">
+          <span class="parameter_value">TDS: <span id="tds_value">NA</span></span><br>
+          <div id="tds_percentage" class="chart_param">
             <div class="active_good"></div>
             <div class="active_good"></div>
             <div class="active_bad"></div>

@@ -35,8 +35,8 @@ https://github.com/me-no-dev/arduino-esp32fs-plugin/releases/
 In the ino. files in this section,
 ```
 // SSID and password of Wifi connection:
-const char* ssid = "Arduino_ssid";
-const char* password = "password";
+const char* ssid = "HotSpot - UI (NEW)";
+const char* password = "";
 ```
 ssid and password need to be changed according to the router/wifi that is used.
 
