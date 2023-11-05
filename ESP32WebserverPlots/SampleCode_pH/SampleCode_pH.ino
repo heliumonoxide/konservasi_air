@@ -1,52 +1,83 @@
 /*
- * file DFRobot_PH.ino
- * @ https://github.com/DFRobot/DFRobot_PH
- *
- * This is the sample code for Gravity: Analog pH Sensor / Meter Kit V2, SKU:SEN0161-V2
- * In order to guarantee precision, a temperature sensor such as DS18B20 is needed, to execute automatic temperature compensation.
- * You can send commands in the serial monitor to execute the calibration.
- * Serial Commands:
- *   enterph -> enter the calibration mode
- *   calph   -> calibrate with the standard buffer solution, two buffer solutions(4.0 and 7.0) will be automaticlly recognized
- *   exitph  -> save the calibrated parameters and exit from calibration mode
- *
- * Copyright   [DFRobot](http://www.dfrobot.com), 2018
- * Copyright   GNU Lesser General Public License
- *
- * version  V1.0
- * date  2018-04
- */
-
-#include "DFRobot_PH.h"
-#include <EEPROM.h>
-
-#define PH_PIN 33
-float voltage,phValue,temperature = 25;
-DFRobot_PH ph;
-
-void setup()
+ # This sample code is used to test the pH meter V1.0.
+ # Editor : YouYou
+ # Ver    : 1.0
+ # Product: analog pH meter
+ # SKU    : SEN0161
+*/
+#define SensorPin 35            //pH meter Analog output to Arduino Analog Input 0
+#define Offset 2.80            //deviation compensate
+#define LED 13
+#define samplingInterval 20
+#define printInterval 800
+#define ArrayLenth  40    //times of collection
+int pHArray[ArrayLenth];   //Store the average value of the sensor feedback
+int pHArrayIndex=0;
+void setup(void)
 {
-    Serial.begin(115200);  
-    ph.begin();
+  pinMode(LED,OUTPUT);
+  Serial.begin(115200);
+  Serial.println("pH meter experiment!");    //Test the serial monitor
 }
-
-void loop()
+void loop(void)
 {
-    static unsigned long timepoint = millis();
-    if(millis()-timepoint>1000U){                  //time interval: 1s
-        timepoint = millis();
-        //temperature = readTemperature();         // read your temperature sensor to execute temperature compensation
-        voltage = analogRead(PH_PIN)/4096.0*5000;  // read the voltage
-        phValue = ph.readPH(voltage,temperature);  // convert voltage to pH with temperature compensation
-        Serial.print("temperature:");
-        Serial.print(temperature,1);
-        Serial.print("^C  pH:");
-        Serial.println(phValue,2);
+  static unsigned long samplingTime = millis();
+  static unsigned long printTime = millis();
+  static float pHValue,voltage;
+  if(millis()-samplingTime > samplingInterval)
+  {
+      pHArray[pHArrayIndex++]=analogRead(SensorPin);
+      if(pHArrayIndex==ArrayLenth)pHArrayIndex=0;
+      voltage = avergearray(pHArray, ArrayLenth)*5.0/4096;
+      pHValue = 3.5*voltage+Offset;
+      samplingTime=millis();
+  }
+  if(millis() - printTime > printInterval)   //Every 800 milliseconds, print a numerical, convert the state of the LED indicator
+  {
+    Serial.print("Voltage:");
+        Serial.print(voltage,2);
+        Serial.print("    pH value: ");
+    Serial.println(pHValue,2);
+        digitalWrite(LED,digitalRead(LED)^1);
+        printTime=millis();
+  }
+}
+double avergearray(int* arr, int number){
+  int i;
+  int max,min;
+  double avg;
+  long amount=0;
+  if(number<=0){
+    Serial.println("Error number for the array to avraging!/n");
+    return 0;
+  }
+  if(number<5){   //less than 5, calculated directly statistics
+    for(i=0;i<number;i++){
+      amount+=arr[i];
     }
-    ph.calibration(voltage,temperature);           // calibration process by Serail CMD
-}
-
-float readTemperature()
-{
-  //add your code here to get the temperature from your temperature sensor
+    avg = amount/number;
+    return avg;
+  }else{
+    if(arr[0]<arr[1]){
+      min = arr[0];max=arr[1];
+    }
+    else{
+      min=arr[1];max=arr[0];
+    }
+    for(i=2;i<number;i++){
+      if(arr[i]<min){
+        amount+=min;        //arr<min
+        min=arr[i];
+      }else {
+        if(arr[i]>max){
+          amount+=max;    //arr>max
+          max=arr[i];
+        }else{
+          amount+=arr[i]; //min<=arr<=max
+        }
+      }//if
+    }//for
+    avg = (double)amount/(number-2);
+  }//if
+  return avg;
 }

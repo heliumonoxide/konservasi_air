@@ -22,6 +22,7 @@ function init() {
   };
 }
 
+
 // function slider_changed () {
 //   var l_random_intensity = slider.value;
 //   console.log(l_random_intensity);
@@ -50,9 +51,11 @@ function processCommand(event) {
     document.getElementById('ph_value').innerHTML = obj.value[2];
     document.getElementById('ntu_value').innerHTML = obj.value[3];
     document.getElementById('tds_value').innerHTML = obj.value[4];
+
     // myChart.data.datasets[0].data = obj.value;
-    // myChart.update();
+    // myChart.update(); 
   }
+
   // else if (type.localeCompare("random_intensity") == 0) { 
   //   var l_random_intensity = parseInt(obj.value); 
   //   console.log(l_random_intensity); 

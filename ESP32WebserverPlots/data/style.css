@@ -201,7 +201,6 @@ hr {
     display: flex;
     margin: auto;
     margin-top: 30px;
-    width: 95%;
     justify-content: space-around;
 }
 
@@ -227,6 +226,23 @@ hr {
     background-color: #EC4343;
     height: 40px;
     padding: 20px;   
+}
+
+#pHProgress {
+    display: flex;
+    margin: auto;
+    margin-top: 30px;
+    justify-content: space-between;
+    background-color: darkred;
+}
+
+#pHBar {
+    width: 0%;
+    height: 40px;
+    padding: 20px;
+    opacity: 0.2; 
+    background-color: white;
+    transition: ease-in;
 }
 
 @media screen and (min-width: 360px) and (max-width: 1129px) {
