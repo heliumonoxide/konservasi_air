@@ -215,13 +215,13 @@ hr {
 
 #pHBar {
     width: 0%;
-    height: 40px;
-    padding: 20px;
-    opacity: 0.2; 
-    background-color: rgb(255, 238, 216);
+    height: 80px;
+    opacity: 0.3; 
+    background-color: rgb(255, 255, 255);
     transition: ease-in;
     z-index: 1;
     position: absolute;
+    offset: 50px;
 }
 
 .Separator {
@@ -247,10 +247,9 @@ hr {
 
 #NTUBar {
     width: 0%;
-    height: 40px;
-    padding: 20px;
-    opacity: 0.2; 
-    background-color: rgb(255, 241, 216);
+    height: 80px;
+    opacity: 0.3; 
+    background-color: rgb(255, 255, 255);
     transition: ease-in;
     z-index: 1;
     position: absolute;
@@ -274,10 +273,9 @@ hr {
 
 #TDSBar {
     width: 0%;
-    height: 40px;
-    padding: 20px;
-    opacity: 0.2; 
-    background-color: rgb(255, 241, 216);
+    height: 80px;
+    opacity: 0.3; 
+    background-color: rgb(255, 255, 255);
     transition: ease-in;
     z-index: 1;
     position: absolute;

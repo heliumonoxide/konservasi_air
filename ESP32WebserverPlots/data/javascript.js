@@ -19,7 +19,10 @@ function init() {
   Socket = new WebSocket('ws://' + window.location.hostname + ':81/');
   Socket.onmessage = function(event) {
     processCommand(event);
-  };
+    adjust_bar_ph()
+    adjust_bar_ntu();
+    adjust_bar_tds() 
+   };
 }
 
 

@@ -29,8 +29,9 @@
 // ...
 
 // SSID and password of Wifi connection:
-const char* ssid = "HotSpot - UI (NEW)";
-const char* password = "";
+const char* ssid = "RedmiNote9Pro";
+const char* password = "conkoromu";
+
 
 // Configure IP addresses of the local access point
 //IPAddress local_IP(192,168,1,1);
@@ -98,7 +99,21 @@ void loop() {
     previousMillis = now;                             // reset previousMillis
 
     for(int i=0; i < ARRAY_LENGTH; i++) {         // update sensors value over time
-      sensors_val[i] = random(10);
+      if(i==1){
+        sensors_val[i] = random(50);
+      }
+      else if(i==2){
+        sensors_val[i] = random(14);
+      }
+      else if(i==3){
+        sensors_val[i] = random(3000);
+      }
+      else if(i==4){
+        sensors_val[i] = random(1000);
+      }
+      else{
+        sensors_val[i] = random(10);
+      }
     }
 
     sendJsonArray("dashboard_update", sensors_val);
