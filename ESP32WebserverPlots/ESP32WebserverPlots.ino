@@ -53,13 +53,6 @@ unsigned long previousMillis = 0;                     // we use the "millis()" c
 AsyncWebServer server(80);                            // the server uses port 80 (standard port for websites
 WebSocketsServer webSocket = WebSocketsServer(81);    // the websocket uses port 81 (standard port for websockets
 
-// Set your Static IP address
-IPAddress local_IP(192, 168, 1, 123);
-// Set your Gateway IP address
-IPAddress gateway(192, 168, 1, 1);
-
-IPAddress subnet(255, 255, 255, 0);
-
 // Initialization of the hardware
 unsigned long startTime;
 
