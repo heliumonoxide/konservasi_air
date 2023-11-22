@@ -31,6 +31,15 @@
 #include "DFRobot_PH.h"
 #include <EEPROM.h>
  
+// Library for ADC1115
+#include <Wire.h>
+#include <Adafruit_ADS1X15.h>
+
+Adafruit_ADS1115 ads;
+
+int16_t adc0, adc1, adc2;
+float volts0, volts1, volts2;
+
 #define TEMP_PIN 32 // Yellow cable on temp-liquid sensor pin
 #define TURB_PIN 34
 #define TDS_PIN 35
@@ -40,8 +49,8 @@
 #define PUMP_PIN 20
 
 // SSID and password of Wifi connection:
-const char* ssid = "RedmiNote9Pro";
-const char* password = "conkoromu";
+const char* ssid = "HotSpot - UI (NEW)";
+const char* password = "";
 
 const int ARRAY_LENGTH = 5;  // final_quality, temperature_value, ph_value, ntu_value, tds_value (Currently only for 5 sensors on 1 Niagara place)
 int sensors_val[ARRAY_LENGTH];
@@ -51,8 +60,8 @@ int interval = 2000;                                  // send data to the client
 unsigned long previousMillis = 0;                     // we use the "millis()" command for time reference and this will output an unsigned long
 
 // Initialization of webserver and websocket
-AsyncWebServer server(80);                            // the server uses port 80 (standard port for websites
-WebSocketsServer webSocket = WebSocketsServer(81);    // the websocket uses port 81 (standard port for websockets
+AsyncWebServer server(80);                            // the server uses port 80 (standard port for websites)
+WebSocketsServer webSocket = WebSocketsServer(81);    // the websocket uses port 81 (standard port for websockets)
 
 // Initialization of the hardware
 unsigned long startTime;
@@ -63,7 +72,7 @@ OneWire oneWire(TEMP_PIN); // Setup a oneWire instance to communicate with any O
 DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor 
 
 // TDS Sensor Parameter
-#define VREF 5.0      // analog reference voltage(Volt) of the ADC
+#define VREF 3.3      // analog reference voltage(Volt) of the ADC
 #define SCOUNT  30           // sum of sample point
 int analogBuffer[SCOUNT];    // store the analog value in the array, read from ADC
 int analogBufferTemp[SCOUNT];
@@ -102,6 +111,7 @@ const int sudut_open = 180;
 
 void setup() {
   Serial.begin(115200);                               // init serial port for debugging
+  ads.begin();
 
   if (!SPIFFS.begin()) {
     Serial.println("SPIFFS could not initialize");
@@ -136,7 +146,7 @@ void setup() {
 
   // Device Wiring Part
   pinMode(TURB_PIN, INPUT);
-  pinMode(TDS_PIN,INPUT);
+  pinMode(TDS_PIN, INPUT);
   pinMode(PUMP_PIN, OUTPUT);
   servo1.attach(PIN_SERVO1);
 //    servo2.attach(PIN_SERVO2); 
@@ -151,15 +161,37 @@ void setup() {
   delay(1000);
 }
 
-// sendJsonArray used for final_quality, temperature_value, ph_value, ntu_value, tds_value
 void loop()
 {
   add_buffer(); // Data Additional Sensor TDS
   if(counter == 0 || (millis() - startTime >= 30000) || exec_measurement == true){
     if (exec_measurement == false){
+
       servo1.write(sudut_trigger_open);
-      delay(10000);
+      // ================================================ delay(10000); =================================================
+      unsigned long lastExecutedMillis = millis(); // variable to save the last executed time
+      while(1) {
+        unsigned long curMillis = millis();
+        if (curMillis - lastExecutedMillis >= 10000) {
+          lastExecutedMillis = curMillis; // save the last executed time
+          break;
+        }
+      }
+      // ================================================================================================================
       servo1.write(sudut_trigger_close);
+
+      // int pos;
+      // for (pos = sudut_trigger_close; pos <= sudut_trigger_open; pos += 1) { // goes from 0 degrees to 180 degrees
+      //   // in steps of 1 degree
+      //   servo1.write(pos);              // tell servo to go to position in variable 'pos'
+      //   delay(15);                       // waits 15ms for the servo to reach the position
+      // }
+      // delay(10000);
+      // for (pos = sudut_trigger_open; pos >= sudut_trigger_close; pos -= 1) { // goes from 180 degrees to 0 degrees
+      //   servo1.write(pos);              // tell servo to go to position in variable 'pos'
+      //   delay(15);                       // waits 15ms for the servo to reach the position
+      // }
+
       exec_measurement = true;
     }
 
@@ -177,10 +209,10 @@ void loop()
       Serial.println(" C \n");
   
       // Sensor Turbidity
-      int sensorValue = analogRead(TURB_PIN);// read the input on analog pin 0:
+      int sensorValue = ads.readADC_SingleEnded(1);// read the input on analog pin ads A1:
       Serial.print("Analog Value: ");
       Serial.println(sensorValue);
-      float voltage = (sensorValue / 4095.0) * 5.0; // Convert the analog reading (which goes from 0 - 4096) to a voltage (0 - 4.5V):
+      float voltage = ads.computeVolts(sensorValue); // Convert the analog reading (which goes from 0 - 4096) to a voltage (0 - 3.3V):
       ntu = -1120.4*voltage*voltage + 5742.3*voltage - 4352.9;
       Serial.print("Turbidity Voltage: ");
       Serial.println(voltage); // print out the value you read:
@@ -192,7 +224,7 @@ void loop()
       print_tds();
   
       // Sensor pH
-      pH_buffer;
+      pH_buffer();
 
       Serial.println("=====================================");
       
@@ -200,12 +232,16 @@ void loop()
         exec_measurement = false;
         startTime = millis();
         servo1.write(sudut_trigger_close);
-//        Start the water pumping out
+        // Start the water pumping out
+        digitalWrite(PUMP_PIN, HIGH); // sets the digital PUMP_PIN on
+        delay(5000);            // waits for 5 seconds
+        digitalWrite(PUMP_PIN, LOW);  // sets the digital PUMP_PIN off
         counter = 0;
       }
       counter += 1;
     }
   }
+
   webSocket.loop();                                   // Update function for the webSockets 
   unsigned long now = millis();                       // read out the current "time" ("millis()" gives the time in ms since the Arduino started)
   if ((unsigned long)(now - previousMillis) > interval) { // check if "interval" ms has passed since last time the clients were updated
@@ -259,6 +295,7 @@ void webSocketEvent(byte num, WStype_t type, uint8_t * payload, size_t length) {
 }
 
 // Simple function to send information to the web clients
+// sendJsonArray used for final_quality, temperature_value, ph_value, ntu_value, tds_value
 void sendJsonArray(String l_type, int l_array_values[]) {
     String jsonString = "";                           // create a JSON string for sending data to the client
     const size_t CAPACITY = JSON_ARRAY_SIZE(ARRAY_LENGTH) + 100;
@@ -280,7 +317,7 @@ void add_buffer(void){
   currentTimeBuffer = millis();
   if(currentTimeBuffer - startTimeBuffer > 40UL)     //every 40 milliseconds,read the analog value from the ADC
   {
-   analogBuffer[analogBufferIndex] = analogRead(TDS_PIN);    //read the analog value and store into the buffer
+   analogBuffer[analogBufferIndex] = ads.readADC_SingleEnded(0);    //read the analog value and store into the buffer
    analogBufferIndex++;
    if(analogBufferIndex == SCOUNT){
     analogBufferIndex = 0; 
@@ -295,7 +332,7 @@ void print_tds(void){
     analogBufferTemp[copyIndex]= analogBuffer[copyIndex];
   }
   
-  averageVoltage = getMedianNum(analogBufferTemp,SCOUNT) * (float)VREF / 4096.0; // read the analog value more stable by the median filtering algorithm, and convert to voltage value
+  averageVoltage = ads.computeVolts(getMedianNum(analogBufferTemp,SCOUNT)); // read the analog value more stable by the median filtering algorithm, and convert to voltage value
   float compensationCoefficient=1.0+0.02*(temperature-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
   float compensationVolt=averageVoltage/compensationCoefficient;  //temperature compensation
   tdsValue=(133.42*compensationVolt*compensationVolt*compensationVolt - 255.86*compensationVolt*compensationVolt + 857.39*compensationVolt)*0.5; //convert voltage value to tds value
@@ -312,14 +349,14 @@ void print_tds(void){
 void pH_buffer(void) {
  while(true)
   {
-    pHArray[pHArrayIndex++]=analogRead(PH_PIN);
+    pHArray[pHArrayIndex++] = ads.readADC_SingleEnded(2);  // pH
     if(pHArrayIndex==ArrayLength){
       pHArrayIndex=0;
-      pHvoltage = averagearray(pHArray, ArrayLength)*5.0/4096;
+      pHvoltage = ads.computeVolts(averagearray(pHArray, ArrayLength));
       pHValue = 3.5*pHvoltage+Offset;
       break;
     }
-    pHvoltage = averagearray(pHArray, ArrayLength)*5.0/4096;
+    pHvoltage = ads.computeVolts(averagearray(pHArray, ArrayLength));
     pHValue = 3.5*pHvoltage+Offset;
   }
 }
