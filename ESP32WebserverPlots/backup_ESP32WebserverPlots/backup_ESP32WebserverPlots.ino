@@ -37,7 +37,6 @@
 #define PH_PIN 33
 #define PIN_SERVO1 25
 #define PIN_SERVO2 26
-#define PUMP_PIN 20
 
 // SSID and password of Wifi connection:
 const char* ssid = "RedmiNote9Pro";
@@ -137,8 +136,7 @@ void setup() {
   // Device Wiring Part
   pinMode(TURB_PIN, INPUT);
   pinMode(TDS_PIN,INPUT);
-  pinMode(PUMP_PIN, OUTPUT);
-  servo1.attach(PIN_SERVO1);
+  servo1.attach(PIN_SERVO1); 
 //    servo2.attach(PIN_SERVO2); 
 
   sensors.begin();
