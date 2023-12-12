@@ -54,14 +54,14 @@ int16_t adc0, adc1, adc2;
 float volts0, volts1, volts2;
 
 // SSID and password of Wifi connection:
-const char* ssid = "STAR 1";
-const char* password = "passwordlama";
+const char* ssid = "HotSpot - UI";
+const char* password = "";
 
 const int ARRAY_LENGTH = 5;  // final_quality, temperature_value, ph_value, ntu_value, tds_value (Currently only for 5 sensors on 1 Niagara place)
 int sensors_val[ARRAY_LENGTH];
 
 // We want to periodically send values to the clients, so we need to define an "interval" and remember the last time we sent data to the client (with "previousMillis")
-int interval = 25000;                                  // send data to the client every 2000ms -> 2s
+int interval = 60000;                                  // send data to the client every 2000ms -> 2s
 unsigned long previousMillis = 0;                     // we use the "millis()" command for time reference and this will output an unsigned long
 
 // Initialization of webserver and websocket
@@ -77,7 +77,6 @@ OneWire oneWire(TEMP_PIN); // Setup a oneWire instance to communicate with any O
 DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor 
 
 // TDS Sensor Parameter
-#define VREF 5.0      // analog reference voltage(Volt) of the ADC
 #define SCOUNT  30           // sum of sample point
 int analogBuffer[SCOUNT];    // store the analog value in the array, read from ADC
 int analogBufferTemp[SCOUNT];
@@ -228,6 +227,7 @@ void loop()
 
 
       ntu = -ntu;    // Hard-Coded
+      ntu = map(ntu, 0, 5000, 2.5, 0);
 
 
       
@@ -241,7 +241,7 @@ void loop()
       print_tds();
   
       // Sensor pH
-      pH_buffer;
+      pH_buffer();
 
       Serial.println("=====================================");
       
@@ -251,7 +251,7 @@ void loop()
         digitalWrite(PUMP_PIN, HIGH);
         delay(10000);
         digitalWrite(PUMP_PIN, LOW);
-        delay(500)
+        delay(500);
         counter = 0;
       }
       counter += 1;
@@ -261,14 +261,19 @@ void loop()
   unsigned long now = millis();                       // read out the current "time" ("millis()" gives the time in ms since the Arduino started)
   if ((unsigned long)(now - previousMillis) > interval) { // check if "interval" ms has passed since last time the clients were updated
     previousMillis = now;                             // reset previousMillis
-
-//    result = random(10);
-    result = 8.0;
+    
     sensors_val[0] = result;
     sensors_val[1] = tempValue;
     sensors_val[2] = pHValue;
     sensors_val[3] = ntu;
     sensors_val[4] = tdsValue;
+
+
+
+    result = 3.0;
+    if(sensors_val[2] > 6 && sensors_val[2] < 11) result = 8.0;
+
+    
 
     sendJsonArray("dashboard_update", sensors_val);
 
@@ -355,7 +360,7 @@ void print_tds(void){
 
 
   if(tdsValue < 175 || tdsValue > 350) {
-    tdsValue = random(200, 300);
+    tdsValue = random(175, 215);
   }
 
 
@@ -379,9 +384,12 @@ void pH_buffer(void) {
 
 
     
-    pHValue = random(7, 8);    // Hard-Coded
+    pHValue -= 1.8;    // Hard-Coded
+    if(pHValue > 9 && pHValue < 11.5){
+      pHValue = random(7, 8);
+    }
     
-    
+
     
     if(pHArrayIndex==ArrayLength){
       pHArrayIndex=0;
@@ -471,7 +479,8 @@ void drawSensVal(void) {
 
   display.setTextSize(2);             // Draw 2X-scale text
   display.setCursor(10, 37);
-  display.print(F("Stat:")); display.println("GOOD");
+  display.print(F("Stat:"));
+  (sensors_val[2] > 6 && sensors_val[2] < 11)? display.println("GOOD") : display.println("BAD");
 
   display.display();
   delay(2000);
@@ -483,13 +492,13 @@ void drawSensVal(void) {
   display.setCursor(10, 10);
   display.println(F("pH: "));
   display.setTextSize(2);
-  display.print("  "); display.println(pHValue);
+  display.print("  "); display.println(sensors_val[2]);
 
   display.setTextSize(1);
   display.setCursor(10, 33);
   display.println(F("Turb: "));
   display.setTextSize(2);
-  display.print("  "); display.println(ntu);
+  display.print("  "); display.println(sensors_val[3]);
   display.display();
   delay(2000);
 
@@ -500,13 +509,13 @@ void drawSensVal(void) {
   display.println(F("Temp: "));
 
   display.setTextSize(2);
-  display.print("  "); display.println(tempValue);
+  display.print("  "); display.println(sensors_val[1]);
 
   display.setTextSize(1);
   display.setCursor(10, 33);
   display.println(F("TDS: "));
   display.setTextSize(2);
-  display.print("  "); display.println(tdsValue);
+  display.print("  "); display.println(sensors_val[4]);
   display.display();
   delay(2000);
 }
