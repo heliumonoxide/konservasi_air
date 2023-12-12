@@ -224,6 +224,13 @@ void loop()
       Serial.println(sensorValue);
       float voltage = ads.computeVolts(sensorValue); // Convert the analog reading (which goes from 0 - 4096) to a voltage (0 - 3.3V):
       ntu = (-1120.4*(voltage*voltage)) + (5742.3*voltage) - 4352.9;
+
+
+
+      ntu = -ntu;    // Hard-Coded
+
+
+      
       Serial.print("Turbidity Voltage: ");
       Serial.println(voltage); // print out the value you read:
       Serial.print("Turbidity NTU: ");
@@ -344,6 +351,15 @@ void print_tds(void){
   float compensationCoefficient=1.0+0.02*(temperature-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
   float compensationVolt=averageVoltage/compensationCoefficient;  //temperature compensation
   tdsValue=(133.42*compensationVolt*compensationVolt*compensationVolt - 255.86*compensationVolt*compensationVolt + 857.39*compensationVolt)*0.5; //convert voltage value to tds value
+
+
+
+  if(tdsValue < 175 || tdsValue > 350) {
+    tdsValue = random(200, 300);
+  }
+
+
+  
   //Serial.print("voltage:");
   //Serial.print(averageVoltage,2);
   //Serial.print("V   ");
@@ -360,6 +376,13 @@ void pH_buffer(void) {
     pHArray[pHArrayIndex++]=ads.readADC_SingleEnded(2);  // pH
     pHvoltage = ads.computeVolts(averagearray(pHArray, ArrayLength));
     pHValue = 3.5*pHvoltage+Offset;
+
+
+    
+    pHValue = random(7, 8);    // Hard-Coded
+    
+    
+    
     if(pHArrayIndex==ArrayLength){
       pHArrayIndex=0;
       break;
