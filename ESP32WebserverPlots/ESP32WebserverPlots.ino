@@ -24,44 +24,49 @@
 #include <WebSocketsServer.h>                         // needed for instant communication between client and server through Websockets
 #include <ArduinoJson.h>                              // needed for JSON encapsulation (send multiple variables with one string)
 #include <SPIFFS.h>
+#include <AsyncElegantOTA.h>
 // Hardware Initialization
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <ESP32Servo.h>
 #include "DFRobot_PH.h"
 #include <EEPROM.h>
- 
-// Library for ADC1115
+#include <SPI.h>
 #include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 #include <Adafruit_ADS1X15.h>
+
+#define TEMP_PIN 23 // Yellow cable on temp-liquid sensor pin
+
+#define PIN_SERVO1 25
+#define PUMP_PIN 12
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 Adafruit_ADS1115 ads;
 
 int16_t adc0, adc1, adc2;
 float volts0, volts1, volts2;
 
-#define TEMP_PIN 32 // Yellow cable on temp-liquid sensor pin
-#define TURB_PIN 34
-#define TDS_PIN 35
-#define PH_PIN 33
-#define PIN_SERVO1 25
-#define PIN_SERVO2 26
-#define PUMP_PIN 20
-
 // SSID and password of Wifi connection:
-const char* ssid = "HotSpot - UI (NEW)";
-const char* password = "";
+const char* ssid = "STAR 1";
+const char* password = "passwordlama";
 
 const int ARRAY_LENGTH = 5;  // final_quality, temperature_value, ph_value, ntu_value, tds_value (Currently only for 5 sensors on 1 Niagara place)
 int sensors_val[ARRAY_LENGTH];
 
 // We want to periodically send values to the clients, so we need to define an "interval" and remember the last time we sent data to the client (with "previousMillis")
-int interval = 2000;                                  // send data to the client every 2000ms -> 2s
+int interval = 25000;                                  // send data to the client every 2000ms -> 2s
 unsigned long previousMillis = 0;                     // we use the "millis()" command for time reference and this will output an unsigned long
 
 // Initialization of webserver and websocket
-AsyncWebServer server(80);                            // the server uses port 80 (standard port for websites)
-WebSocketsServer webSocket = WebSocketsServer(81);    // the websocket uses port 81 (standard port for websockets)
+AsyncWebServer server(80);                            // the server uses port 80 (standard port for websites
+WebSocketsServer webSocket = WebSocketsServer(81);    // the websocket uses port 81 (standard port for websockets
 
 // Initialization of the hardware
 unsigned long startTime;
@@ -72,7 +77,7 @@ OneWire oneWire(TEMP_PIN); // Setup a oneWire instance to communicate with any O
 DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor 
 
 // TDS Sensor Parameter
-#define VREF 3.3      // analog reference voltage(Volt) of the ADC
+#define VREF 5.0      // analog reference voltage(Volt) of the ADC
 #define SCOUNT  30           // sum of sample point
 int analogBuffer[SCOUNT];    // store the analog value in the array, read from ADC
 int analogBufferTemp[SCOUNT];
@@ -81,6 +86,8 @@ float averageVoltage = 0,tdsValue = 0,temperature = 25;
 unsigned long startTimeBuffer = 0;
 unsigned long currentTimeBuffer;
 unsigned long startTimeTDS = 0;
+
+float result;
 
 // NTU
 float ntu = 0;
@@ -100,14 +107,14 @@ bool exec_measurement = false;
 int counter = 0;
 
 // Servo
-Servo servo1;  
-Servo servo2;
-const int sudut_trigger_open = 180;
+Servo servo1;
+const int sudut_trigger_open = 135;
 const int sudut_close = 0;
 const int sudut_trigger_close = 0;
-const int sudut_open = 180;
+const int sudut_open = 135;
+int pos = 0;    // variable to store the servo position
 
-
+void webSocketEvent(byte num, WStype_t type, uint8_t * payload, size_t length);
 
 void setup() {
   Serial.begin(115200);                               // init serial port for debugging
@@ -142,14 +149,32 @@ void setup() {
   webSocket.begin();                                  // start websocket
   webSocket.onEvent(webSocketEvent);                  // define a callback function -> what does the ESP32 need to do when an event from the websocket is received? -> run function "webSocketEvent()"
 
+  AsyncElegantOTA.begin(&server);    // Start AsyncElegantOTA
+  
   server.begin();                                     // start server -> best practise is to start the server after the websocket
 
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+  display.clearDisplay();
+  display.drawRect(6, 6, display.width()-6*2, display.height()-6*2, WHITE);
+  display.fillRect(6, 6, display.width()-6*2, 14, WHITE);
+  display.setTextSize(1);             // Normal 1:1 pixel scale
+  display.setCursor(10, 10);
+  display.setTextColor(BLACK, WHITE); // Draw 'inverse' text
+  display.print(F("NIAGARA MONITORING"));
+  display.setCursor(10, 24);
+  display.setTextColor(WHITE);        // Draw white text
+  display.print(F("IP: ")); display.print(WiFi.localIP());
+  display.display();
+
   // Device Wiring Part
-  pinMode(TURB_PIN, INPUT);
-  pinMode(TDS_PIN, INPUT);
   pinMode(PUMP_PIN, OUTPUT);
+  digitalWrite(PUMP_PIN, LOW);
+  
   servo1.attach(PIN_SERVO1);
-//    servo2.attach(PIN_SERVO2); 
 
   sensors.begin();
   startTime = millis();
@@ -161,37 +186,22 @@ void setup() {
   delay(1000);
 }
 
+// sendJsonArray used for final_quality, temperature_value, ph_value, ntu_value, tds_value
 void loop()
 {
   add_buffer(); // Data Additional Sensor TDS
   if(counter == 0 || (millis() - startTime >= 30000) || exec_measurement == true){
     if (exec_measurement == false){
-
-      servo1.write(sudut_trigger_open);
-      // ================================================ delay(10000); =================================================
-      unsigned long lastExecutedMillis = millis(); // variable to save the last executed time
-      while(1) {
-        unsigned long curMillis = millis();
-        if (curMillis - lastExecutedMillis >= 10000) {
-          lastExecutedMillis = curMillis; // save the last executed time
-          break;
-        }
-      }
-      // ================================================================================================================
-      servo1.write(sudut_trigger_close);
-
-      // int pos;
-      // for (pos = sudut_trigger_close; pos <= sudut_trigger_open; pos += 1) { // goes from 0 degrees to 180 degrees
-      //   // in steps of 1 degree
-      //   servo1.write(pos);              // tell servo to go to position in variable 'pos'
-      //   delay(15);                       // waits 15ms for the servo to reach the position
-      // }
-      // delay(10000);
-      // for (pos = sudut_trigger_open; pos >= sudut_trigger_close; pos -= 1) { // goes from 180 degrees to 0 degrees
-      //   servo1.write(pos);              // tell servo to go to position in variable 'pos'
-      //   delay(15);                       // waits 15ms for the servo to reach the position
-      // }
-
+  for (pos = sudut_trigger_close; pos <= sudut_trigger_open; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    servo1.write(pos);    // tell servo to go to position in variable 'pos'
+    delay(10);             // waits 15ms for the servo to reach the position
+  }
+  delay(10000);
+  for (pos = sudut_trigger_open; pos >= sudut_trigger_close; pos -= 1) { // goes from 180 degrees to 0 degrees
+    servo1.write(pos);    // tell servo to go to position in variable 'pos'
+    delay(10);             // waits 15ms for the servo to reach the position
+  }
       exec_measurement = true;
     }
 
@@ -213,7 +223,7 @@ void loop()
       Serial.print("Analog Value: ");
       Serial.println(sensorValue);
       float voltage = ads.computeVolts(sensorValue); // Convert the analog reading (which goes from 0 - 4096) to a voltage (0 - 3.3V):
-      ntu = -1120.4*voltage*voltage + 5742.3*voltage - 4352.9;
+      ntu = (-1120.4*(voltage*voltage)) + (5742.3*voltage) - 4352.9;
       Serial.print("Turbidity Voltage: ");
       Serial.println(voltage); // print out the value you read:
       Serial.print("Turbidity NTU: ");
@@ -224,30 +234,29 @@ void loop()
       print_tds();
   
       // Sensor pH
-      pH_buffer();
+      pH_buffer;
 
       Serial.println("=====================================");
       
       if(counter == 4){
         exec_measurement = false;
         startTime = millis();
-        servo1.write(sudut_trigger_close);
-        // Start the water pumping out
-        digitalWrite(PUMP_PIN, HIGH); // sets the digital PUMP_PIN on
-        delay(5000);            // waits for 5 seconds
-        digitalWrite(PUMP_PIN, LOW);  // sets the digital PUMP_PIN off
+        digitalWrite(PUMP_PIN, HIGH);
+        delay(10000);
+        digitalWrite(PUMP_PIN, LOW);
+        delay(500)
         counter = 0;
       }
       counter += 1;
     }
   }
-
   webSocket.loop();                                   // Update function for the webSockets 
   unsigned long now = millis();                       // read out the current "time" ("millis()" gives the time in ms since the Arduino started)
   if ((unsigned long)(now - previousMillis) > interval) { // check if "interval" ms has passed since last time the clients were updated
     previousMillis = now;                             // reset previousMillis
 
-    float result = random(10);
+//    result = random(10);
+    result = 8.0;
     sensors_val[0] = result;
     sensors_val[1] = tempValue;
     sensors_val[2] = pHValue;
@@ -257,9 +266,9 @@ void loop()
     sendJsonArray("dashboard_update", sensors_val);
 
   }
+  drawSensVal();    // Draw sensor value
 }
 
-// webSocketEvent is not in use, client cannot send any data.
 void webSocketEvent(byte num, WStype_t type, uint8_t * payload, size_t length) {      // the parameters of this callback function are always the same -> num: id of the client who send the event, type: type of message, payload: actual data sent and length: length of payload
   switch (type) {                                     // switch on the type of information sent
     case WStype_DISCONNECTED:                         // if a client is disconnected, then type == WStype_DISCONNECTED
@@ -295,7 +304,6 @@ void webSocketEvent(byte num, WStype_t type, uint8_t * payload, size_t length) {
 }
 
 // Simple function to send information to the web clients
-// sendJsonArray used for final_quality, temperature_value, ph_value, ntu_value, tds_value
 void sendJsonArray(String l_type, int l_array_values[]) {
     String jsonString = "";                           // create a JSON string for sending data to the client
     const size_t CAPACITY = JSON_ARRAY_SIZE(ARRAY_LENGTH) + 100;
@@ -349,15 +357,13 @@ void print_tds(void){
 void pH_buffer(void) {
  while(true)
   {
-    pHArray[pHArrayIndex++] = ads.readADC_SingleEnded(2);  // pH
-    if(pHArrayIndex==ArrayLength){
-      pHArrayIndex=0;
-      pHvoltage = ads.computeVolts(averagearray(pHArray, ArrayLength));
-      pHValue = 3.5*pHvoltage+Offset;
-      break;
-    }
+    pHArray[pHArrayIndex++]=ads.readADC_SingleEnded(2);  // pH
     pHvoltage = ads.computeVolts(averagearray(pHArray, ArrayLength));
     pHValue = 3.5*pHvoltage+Offset;
+    if(pHArrayIndex==ArrayLength){
+      pHArrayIndex=0;
+      break;
+    }
   }
 }
 
@@ -424,4 +430,60 @@ double averagearray(int* arr, int number){
     avg = (double)amount/(number-2);
   }//if
   return avg;
+}
+
+void drawSensVal(void) {
+  display.clearDisplay();
+  display.drawRect(6, 6, display.width()-6*2, display.height()-6*2, WHITE);
+  display.fillRect(6, 6, display.width()-6*2, 14, WHITE);
+
+  display.setTextSize(1);             // Normal 1:1 pixel scale
+  display.setCursor(10, 10);
+  display.setTextColor(BLACK, WHITE); // Draw 'inverse' text
+  display.print(F("NIAGARA MONITORING"));
+
+  display.setCursor(10, 24);
+  display.setTextColor(WHITE);        // Draw white text
+  display.print(F("IP: ")); display.print(WiFi.localIP());
+
+  display.setTextSize(2);             // Draw 2X-scale text
+  display.setCursor(10, 37);
+  display.print(F("Stat:")); display.println("GOOD");
+
+  display.display();
+  delay(2000);
+
+
+  display.clearDisplay();
+  display.drawRect(6, 6, display.width()-6*2, display.height()-6*2, WHITE);
+  display.setTextSize(1);
+  display.setCursor(10, 10);
+  display.println(F("pH: "));
+  display.setTextSize(2);
+  display.print("  "); display.println(pHValue);
+
+  display.setTextSize(1);
+  display.setCursor(10, 33);
+  display.println(F("Turb: "));
+  display.setTextSize(2);
+  display.print("  "); display.println(ntu);
+  display.display();
+  delay(2000);
+
+  display.clearDisplay();
+  display.drawRect(6, 6, display.width()-6*2, display.height()-6*2, WHITE);
+  display.setTextSize(1);
+  display.setCursor(10, 10);
+  display.println(F("Temp: "));
+
+  display.setTextSize(2);
+  display.print("  "); display.println(tempValue);
+
+  display.setTextSize(1);
+  display.setCursor(10, 33);
+  display.println(F("TDS: "));
+  display.setTextSize(2);
+  display.print("  "); display.println(tdsValue);
+  display.display();
+  delay(2000);
 }

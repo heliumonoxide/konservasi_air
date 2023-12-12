@@ -39,8 +39,8 @@
 #define PIN_SERVO2 26
 
 // SSID and password of Wifi connection:
-const char* ssid = "RedmiNote9Pro";
-const char* password = "conkoromu";
+const char* ssid = "Hotspot - UI";
+const char* password = "";
 
 const int ARRAY_LENGTH = 5;  // final_quality, temperature_value, ph_value, ntu_value, tds_value (Currently only for 5 sensors on 1 Niagara place)
 int sensors_val[ARRAY_LENGTH];
