@@ -93,4 +93,4 @@ ssid and password need to be changed according to the router/wifi that is used.
 > Before uploading the code, **please upload data sketch first using ESP32 Sketch Data Upload button on tools dropdown section**
 
 ## Created by
-Bryan Indarto, Aldy Raja, Reza Febrian
+Bryan Indarto, Aldy Raja, Theonaldo, dan Reza Febrian
